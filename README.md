@@ -1,4 +1,4 @@
-[![Gem Version](https://badge.fury.io/rb/safe_flock.svg)](http://badge.fury.io/rb/configuration_service) [![Build Status](https://travis-ci.org/starajuice/safe_flock.svg?branch=master)](https://travis-ci.org/starjuice/safe_flock) [![Inline docs](http://inch-ci.org/github/starjuice/safe_flock.svg?branch=master)](http://inch-ci.org/github/starjuice/safe_flock)
+[![Gem Version](https://badge.fury.io/rb/safe_flock.svg)](http://badge.fury.io/rb/safe_flock) [![Build Status](https://travis-ci.org/starajuice/safe_flock.svg?branch=master)](https://travis-ci.org/starjuice/safe_flock) [![Inline docs](http://inch-ci.org/github/starjuice/safe_flock.svg?branch=master)](http://inch-ci.org/github/starjuice/safe_flock)
 
 # SafeFlock
 
