@@ -26,6 +26,10 @@ Or install it yourself as:
 
     $ gem install safe_flock
 
+## Documentation
+
+For documentation of the released gem, see [rubydoc.info](http://www.rubydoc.info/gems/safe_flock).
+
 ## Usage
 
 Simple example:
