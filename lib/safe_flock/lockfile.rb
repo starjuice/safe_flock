@@ -2,18 +2,20 @@ require "time"
 
 module SafeFlock
 
+  ##
+  # Thread-safe, transferable, flock-based lock file implementation
+  #
+  # See {SafeFlock.create} for a safe way to wrap the creation, locking and unlocking of the lock file.
+  #
   class Lockfile
-
-    class Error < RuntimeError; end
-    class Locked < RuntimeError; end
 
     @@global_mutex = Mutex.new unless defined?(@@global_mutex)
     @@path_mutex = {} unless defined?(@@path_mutex)
 
-    # +path+ full pathname of mutually agreed lock file.
+    ##
+    # Initialize (but do not lock)
     #
-    # +options+
-    # * +max_wait+ seconds to retry acquiring lock before giving up and raising +Error+ (+5.0+)
+    # See {SafeFlock.create} for a safe way to wrap the creation, locking and unlocking of the lock file.
     #
     def initialize(path, max_wait: 5.0)
       @pid = $$
@@ -25,6 +27,25 @@ module SafeFlock
       @lockfd = nil
     end
 
+    ##
+    # Lock the lock file
+    #
+    # See {SafeFlock.create} for a safe way to wrap the creation, locking and unlocking of the lock file.
+    #
+    # Attempt to {File#flock} the lock file, creating it if necessary.
+    #
+    # If +max_wait+ is zero, the attempt is non-blocking: if the file
+    # is already locked, give up immediately. Otherwise, continue
+    # trying to lock the file for approximately +max_wait+ seconds.
+    #
+    # The operation is performed under a per-path thread mutex to
+    # preserve mutual exclusion across threads.
+    #
+    # @return [true|false] whether the lock was acquired
+    #
+    # @raise [Exception] if an IO error occurs opening the lock file
+    #   e.g. +Errno::EACCES+
+    #
     def lock
       deadline = Time.now.to_f + @max_wait
       while !(is_locked = try_lock)
@@ -37,9 +58,16 @@ module SafeFlock
       is_locked
     end
 
-    # If the lock is inherited by a forked child process, it will hold the lock until
-    # the child calls +unlock+ (or terminates) _and_ the parent's +Lockfile.create+
-    # block terminates. The parent should not call +unlock+.
+    ##
+    # Unlock the lock file
+    #
+    # See {SafeFlock.create} for a safe way to wrap the creation, locking and unlocking of the lock file.
+    #
+    # Unlock the lock file in the current process.
+    #
+    # The only intended use case for this method is in a forked child process that does significant work
+    # after the mutually exclusive work for which it required the lock. In such cases, the process may
+    # call +unlock+ after the mutually exclusive work is complete.
     #
     def unlock
       if @lockfd
@@ -51,7 +79,20 @@ module SafeFlock
       end
     end
 
-    attr_reader :path, :pid, :thread_id
+    ##
+    # The path to the lock file
+    #
+    attr_reader :path
+
+    ##
+    # The process that created the lock file
+    #
+    attr_reader :pid
+
+    ##
+    # A unique identifier for the thread that created the lock file
+    #
+    attr_reader :thread_id
 
     private
 

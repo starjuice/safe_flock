@@ -1,3 +1,5 @@
+[![Gem Version](https://badge.fury.io/rb/safe_flock.svg)](http://badge.fury.io/rb/configuration_service) [![Build Status](https://travis-ci.org/starajuice/safe_flock.svg?branch=master)](https://travis-ci.org/starjuice/safe_flock) [![Inline docs](http://inch-ci.org/github/starjuice/safe_flock.svg?branch=master)](http://inch-ci.org/github/starjuice/safe_flock)
+
 # SafeFlock
 
 Thread-safe, transferable, flock-based file lock.
@@ -41,9 +43,15 @@ The use case for which the helper was created:
 ```
 require "safe_flock"
 
-SafeFlock.create("/var/run/myapp/myapp.lck") do
+SafeFlock.create("/var/run/myapp/myapp.lck") do |lock|
   child = fork do
+
     # ... mutually excluded processing
+
+    lock.unlock
+
+    # ... non-critical processing
+
   end
 end
 Process.detach(child)
@@ -52,6 +60,8 @@ Process.detach(child)
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+
+To run the test suite, run `bundle exec rake spec`.
 
 To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
 

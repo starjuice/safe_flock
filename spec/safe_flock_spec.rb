@@ -81,8 +81,8 @@ RSpec.describe SafeFlock do
     expect( @ran ).to be true
   end
 
-  # To see the race condition, remove the +sleep(safety_wait)+ from +assert_own_lock+
-  # and introduce a +sleep(0.1)+ into +claim_lockfile+ to simulate bad scheduling.
+  # This spec is inherited from a previous implementation using lock file hitching posts
+  # (File.link).
   #
   it "protects against stale lock race condition" do
     expect( File ).to be_exist(stale_lockfile) # precondition
@@ -136,6 +136,15 @@ RSpec.describe SafeFlock do
 
   it "supports explicit unlock call" do
     subject.create(lockfile) do |lock|
+      lock.unlock
+      subject.create(lockfile) { @ran = true }
+    end
+    expect( @ran ).to be true
+  end
+
+  it "ignores unlock on a lock file that is not locked" do
+    subject.create(lockfile) do |lock|
+      lock.unlock
       lock.unlock
       subject.create(lockfile) { @ran = true }
     end
