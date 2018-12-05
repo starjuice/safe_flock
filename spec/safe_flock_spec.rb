@@ -6,7 +6,19 @@ require "safe_flock"
 
 RSpec.describe SafeFlock do
 
-  let(:tmpdir) { Dir.mktmpdir("rspec") }
+  let(:tmpdir) do
+    if ENV["TEST_TMPDIR"]
+      FileUtils.mkdir_p(ENV["TEST_TMPDIR"])
+      ENV["TEST_TMPDIR"]
+    else
+       Dir.mktmpdir("rspec")
+    end
+  end
+  let(:num_iterations) { ENV["TEST_ITERATIONS"] ? ENV["TEST_ITERATIONS"].to_i : 8 }
+  let(:num_processes) { ENV["TEST_PROCESSES"] ? ENV["TEST_PROCESSES"].to_i : 16 }
+  let(:num_threads) { ENV["TEST_THREADS"] ? ENV["TEST_THREADS"].to_i : 128 }
+  let(:num_secs_gap) { ENV["TEST_SECS_GAP"] ? ENV["TEST_SECS_GAP"].to_f : 0.001 }
+
   let(:lockfile) { File.join(tmpdir, "lockfile") }
   let(:lockfile1) { "#{lockfile}1" }
   let(:lockfile2) { "#{lockfile}2" }
@@ -16,10 +28,17 @@ RSpec.describe SafeFlock do
       Process.wait(child)
     end
   end
+  let(:payload_file) { File.join(tmpdir, "payload") }
   let(:threads) { [] }
 
   before(:each) { lockfile }
-  after(:each) { FileUtils.rm_rf(tmpdir) if File.exist?(tmpdir) }
+  after(:each) do
+    if ENV["TEST_TMPDIR"]
+      File.unlink(payload_file) if File.exist?(payload_file)
+    else
+      FileUtils.rm_rf(tmpdir) if File.exist?(tmpdir)
+    end
+  end
   after(:each) { threads.each { |thr| thr.join } }
 
   subject { described_class }
@@ -98,8 +117,6 @@ RSpec.describe SafeFlock do
   end
 
   it "supports lock transfer to a child process" do
-    payload_file = File.join(tmpdir, "payload")
-
     subject.create(lockfile) do |lock|
       child = fork do
         File.write(payload_file, "child payload")
@@ -117,8 +134,6 @@ RSpec.describe SafeFlock do
 
   # This is not a sensible use case: it just proves thread-safety.
   it "supports lock transfer to a child thread" do
-    payload_file = File.join(tmpdir, "payload")
-
     subject.create(lockfile) do |lock|
       thread = Thread.new do
         begin
@@ -151,12 +166,29 @@ RSpec.describe SafeFlock do
     expect( @ran ).to be true
   end
 
+  it "maintains lock over a fork/exec" do
+    subject.create(lockfile) do
+      up_rd, up_wr = IO.pipe
+      dn_rd, dn_wr = IO.pipe
+      child = fork do
+        up_wr.close
+        dn_rd.close
+        up_rd.read
+        system("/bin/true")
+        expect { subject.create(lockfile, max_wait: 0) { } }.to raise_error(SafeFlock::Locked)
+        dn_wr.close
+      end
+      up_rd.close
+      dn_wr.close
+      up_wr.close
+      expect { subject.create(lockfile, max_wait: 0) { } }.to raise_error(SafeFlock::Locked)
+      dn_rd.read
+      Process.wait(child)
+    end
+  end
+
   it "demonstrates fidelity under load", speed: "slow" do
-    payload_file = File.join(tmpdir, "payload")
     line_length = 80
-    num_iterations = 8
-    num_processes = 16
-    num_threads = 128
 
     children = (0..(num_processes - 1)).map do |i|
       fork do
@@ -164,7 +196,7 @@ RSpec.describe SafeFlock do
           workers = (0..(num_threads - 1)).map do
             Thread.new do
               my_char = rand(10).to_s
-              sleep(rand(0.001))
+              sleep(rand(num_secs_gap))
               begin
                 subject.create(lockfile, max_wait: 5) do
                   line_length.times do

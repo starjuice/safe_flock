@@ -20,8 +20,11 @@ module SafeFlock
   #   until it terminates or explicitly releases the lock
   #   (see SafeFlock::Lockfile#unlock}).
   # * No other thread may enter the block while the lock is held.
-  # * The lock file _may_ be left in place after the lock is released,
-  #   but this behaviour should not be relied upon.
+  # * The lock file _may_ be left in place, written to, truncated
+  #   and/or deleted after the lock is released. The only safe
+  #   assumptions are that the file will exist and be flocked for
+  #   the duration of the block. Therefore, clients should not
+  #   write to the file or rely on its contents or post-lock state.
   #
   # @param [String] path
   #   path of file to flock (created if necessary).

@@ -52,6 +52,7 @@ module SafeFlock
         if Time.now.to_f < deadline
           sleep @wait_per_try
         else
+          unlock
           break
         end
       end
@@ -66,15 +67,19 @@ module SafeFlock
     # Unlock the lock file in the current process.
     #
     # The only intended use case for this method is in a forked child process that does significant work
-    # after the mutually exclusive work for which it required the lock. In such cases, the process may
+    # after the mutually exclusive work for which the lock was required. In such cases, the process may
     # call +unlock+ after the mutually exclusive work is complete.
+    #
+    # The lock file may be written to, truncated and/or deleted to nudge NFS lock release.
     #
     def unlock
       if @lockfd
+        @lockfd.write("-")
+        @lockfd.truncate("-".bytesize) # Nudge NFS
         @lockfd.close
         @lockfd = nil
       end
-      if @mlocked && @pid == $$ and @thread_id == Thread.current.object_id
+      if @pid == $$ and @thread_id == Thread.current.object_id
         mutex_unlock
       end
     end
@@ -99,8 +104,12 @@ module SafeFlock
     def try_lock
       begin
         if try_mutex_lock
-          @lockfd = File.new(@path, "a")
-          @lockfd.flock(File::LOCK_EX | File::LOCK_NB)
+          @lockfd = File.new(@path, "a") unless @lockfd
+          if @lockfd.flock(File::LOCK_EX | File::LOCK_NB)
+            true
+          else
+            mutex_unlock
+          end
         end
       rescue
         @lockfd.close if @lockfd and !@lockfd.closed?
@@ -118,8 +127,8 @@ module SafeFlock
     end
 
     def mutex_unlock
-      @@global_mutex.synchronize do
-        if @mlocked
+      if @mlocked
+        @@global_mutex.synchronize do
           @@path_mutex[@path].unlock
           @@path_mutex.delete(@path)
           @mlocked = false
