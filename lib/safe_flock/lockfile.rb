@@ -97,16 +97,18 @@ module SafeFlock
     private
 
     def try_lock
+      flocked = false
       begin
         if try_mutex_lock
           @lockfd = File.new(@path, "a")
-          @lockfd.flock(File::LOCK_EX | File::LOCK_NB)
+          flocked = @lockfd.flock(File::LOCK_EX | File::LOCK_NB)
         end
-      rescue
-        @lockfd.close if @lockfd and !@lockfd.closed?
-        @lockfd = nil
-        mutex_unlock
-        raise
+      ensure
+        if !flocked
+          @lockfd.close if @lockfd and !@lockfd.closed?
+          @lockfd = nil
+          mutex_unlock
+        end
       end
     end
 
