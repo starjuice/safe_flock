@@ -32,7 +32,11 @@ RSpec.describe SafeFlock do
   let(:threads) { [] }
 
   before(:each) { lockfile }
-  before(:each) { File.unlink(payload_file) if File.exist?(payload_file) }
+  before(:each) do
+    if !ENV["TEST_TMPDIR"]
+      File.unlink(payload_file) if File.exist?(payload_file)
+    end
+  end
   after(:each) do
     if !ENV["TEST_TMPDIR"]
       FileUtils.rm_rf(tmpdir) if File.exist?(tmpdir)

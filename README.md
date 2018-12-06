@@ -71,6 +71,7 @@ If you would like to test compatibility with your NFS implementation, create a d
 directory on multiple clients. Feedback appreciated.
 
 ```
+rm -f /mnt/nfs/mytestdir/payload
 TEST_TMPDIR=/mnt/nfs/mytestdir \
   TEST_ITERATIONS=100 \
   TEST_PROCESSES=3 \
