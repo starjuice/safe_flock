@@ -67,6 +67,18 @@ After checking out the repo, run `bin/setup` to install dependencies. You can al
 
 To run the test suite, run `bundle exec rake spec`.
 
+If you would like to test compatibility with your NFS implementation, create a directory in the NFS filesystem and run the slow test in the same 
+directory on multiple clients. Feedback appreciated.
+
+```
+TEST_TMPDIR=/mnt/nfs/mytestdir \
+  TEST_ITERATIONS=100 \
+  TEST_PROCESSES=3 \
+  TEST_THREADS=3 \
+  TEST_SECS_GAP=2 \
+  bundle exec rspec --tag speed:slow
+```
+
 To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
 
 ## Contributing
