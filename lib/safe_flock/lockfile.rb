@@ -71,6 +71,8 @@ module SafeFlock
     #
     def unlock
       if @lockfd
+        @lockfd.write("-")
+        @lockfd.truncate("-".bytesize) # Nudge NFS
         @lockfd.close
         @lockfd = nil
       end
