@@ -42,7 +42,6 @@ RSpec.describe SafeFlock do
       FileUtils.rm_rf(tmpdir) if File.exist?(tmpdir)
     end
   end
-  after(:each) { FileUtils.rm_rf(tmpdir) if File.exist?(tmpdir) }
   after(:each) { threads.each { |thr| thr.join } }
 
   subject { described_class }
